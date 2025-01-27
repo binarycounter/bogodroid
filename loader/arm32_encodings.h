@@ -22,10 +22,6 @@ typedef enum registers {
     PC  = 15,
 } registers;
 
-#define B_RANGE ((1 << 24) - 1)
-#define B_OFFSET(x) (x + 8) // branch jumps into addr - 8, so range is biased forward
-#define B(PC, DEST)  ((b_enc){.bits = {.cond = 0b1110, .enc = 0b101, .l = 0, .imm24 = (((intptr_t)DEST-(intptr_t)PC) / 4) - 2}})
-#define BL(PC, DEST) ((b_enc){.bits = {.cond = 0b1110, .enc = 0b101, .l = 1, .imm24 = (((intptr_t)DEST-(intptr_t)PC) / 4) - 2}})
 typedef struct b_enc {
   union {
     struct __attribute__((__packed__)) {
@@ -38,7 +34,25 @@ typedef struct b_enc {
   };
 } b_enc;
 
-#define LDR_OFFS(RT, RN, IMM) ((ldst_enc){.bits = {.cond = 0b1110, .enc = 0b010, .p = 1, .u = (IMM >= 0), .b = 0, .w = 0, .bit20_1 = 1, .rn = RN, .rt = RT, .imm12 = (IMM >= 0) ? IMM : -IMM}})
+inline uint32_t _B(uint8_t l, intptr_t IP, intptr_t DEST)
+{
+  b_enc instruction = {
+    .bits = {
+      .imm24 = ((DEST-IP) / 4) - 2,
+      .l = l,
+      .enc = 0b101,
+      .cond = 0b1110
+    }
+  };
+
+  return instruction.raw;
+}
+
+#define B_RANGE ((1 << 24) - 1)
+#define B_OFFSET(x) ((intptr_t)(x) + 8) // branch jumps into addr - 8, so range is biased forward
+#define B(IP, DEST)  (_B(0, (intptr_t)(IP), (intptr_t)(DEST)))
+#define BL(IP, DEST) (_B(1, (intptr_t)(IP), (intptr_t)(DEST)))
+
 typedef struct ldst_enc {
   union {
     struct __attribute__((__packed__)) {
@@ -56,5 +70,26 @@ typedef struct ldst_enc {
     uint32_t raw;
   };
 } ldst_enc;
+
+// #define LDR_OFFS(RT, RN, IMM) (((ldst_enc){.bits = {.cond = 0b1110, .enc = 0b010, .p = 1, .u = (IMM >= 0), .b = 0, .w = 0, .bit20_1 = 1, .rn = RN, .rt = RT, .imm12 = (IMM >= 0) ? IMM : -IMM}}).raw)
+static inline uint32_t LDR_OFFS(int RT, int RN, intptr_t IMM)
+{
+  ldst_enc instruction = {
+    .bits = {
+      .imm12 = (IMM >= 0) ? IMM : -IMM,
+      .rt = RT,
+      .rn = RN,
+      .bit20_1 = 1,
+      .w = 0,
+      .b = 0,
+      .u = (IMM >= 0),
+      .p = 1,
+      .enc = 0b010,
+      .cond = 0b1110
+    }
+  };
+
+  return instruction.raw;
+}
 
 #endif // __ASM_ENCODINGS_H__

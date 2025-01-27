@@ -20,23 +20,30 @@ ${PROJ_SOURCES}
 javastubs/android.cpp
 javastubs/javac.cpp
 platform/common/toml_include.cpp
-platform/common/so_util.c
-platform/linux/so_util_linux.c
-platform/linux/physram.c
-bridges/pthread_bridge.c
-bridges/misc_bridges.c
-bridges/stdio_bridge.c
-bridges/gles2_bridge.c
-bridges/fcntl_bridge.c
-bridges/ctype_bridge.c
-bridges/math_bridge.c
-bridges/gles2_bridge.c
-bridges/ndk_bridge.cpp
+loader/so_util.cpp
+loader/so_util_arm64.cpp
+
+#thunks/libc/libc_table.cpp
+
+# platform/linux/so_util_linux.c
+# platform/linux/physram.c
+# bridges/pthread_bridge.c
+# bridges/misc_bridges.c
+# bridges/stdio_bridge.c
+# bridges/gles2_bridge.c
+# bridges/fcntl_bridge.c
+# bridges/ctype_bridge.c
+# bridges/math_bridge.c
+# bridges/gles2_bridge.c
+# bridges/ndk_bridge.cpp
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC 
 ${CMAKE_SOURCE_DIR}/tomlplusplus/include
 ${CMAKE_SOURCE_DIR}/libjnivm/include
+${CMAKE_SOURCE_DIR}/loader/
+${CMAKE_SOURCE_DIR}/thunks/
+${CMAKE_SOURCE_DIR}/thunks/libc/
 ${CMAKE_SOURCE_DIR}/platform/common
 ${CMAKE_SOURCE_DIR}/bridges
 ${CMAKE_SOURCE_DIR}/javastubs
@@ -51,5 +58,5 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC JNIVM_FAKE_JNI_SYNTAX=1)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC JNI_DEBUG)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC VERBOSE_LOG)
 
-target_link_libraries(${CMAKE_PROJECT_NAME} dl pthread ${CMAKE_SOURCE_DIR}/libjnivm/build/libfake-jni.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libbaron.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libjnivm.a)
+target_link_libraries(${CMAKE_PROJECT_NAME} ${CMAKE_SOURCE_DIR}/libjnivm/build/libfake-jni.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libbaron.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libjnivm.a dl pthread)
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)

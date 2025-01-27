@@ -1,11 +1,24 @@
 #ifndef __SO_UTIL_H__
 #define __SO_UTIL_H__
 
-
 #include <sys/types.h>
 #include <stdint.h>
 #include <stddef.h>
 #include "elf.h"
+
+// RELR/ANDROID_RELA, etc
+#define	DT_RELRSZ	35	/* Total size of ElfNN_Relr relocations. */
+#define	DT_RELR		36	/* Address of ElfNN_Relr relocations. */
+#define	DT_RELRENT	37	/* Size of each ElfNN_Relr relocation. */
+#define DT_ANDROID_RELR 0x6fffe000
+#define DT_ANDROID_RELRSZ 0x6fffe001
+#define DT_ANDROID_RELRENT 0x6fffe003
+#define SHT_ANDROID_REL  (SHT_LOOS + 1)
+#define SHT_ANDROID_RELA (SHT_LOOS + 2)
+#define RELOCATION_GROUPED_BY_INFO_FLAG         1
+#define RELOCATION_GROUPED_BY_OFFSET_DELTA_FLAG 2
+#define RELOCATION_GROUPED_BY_ADDEND_FLAG       4
+#define RELOCATION_GROUP_HAS_ADDEND_FLAG        8
 
 #include "platform.h"
 
@@ -16,21 +29,30 @@ extern "C" {
 #define ALIGN_MEM(x, align) (((x) + ((align) - 1)) & ~((align) - 1))
 #define ENSURE_SYMBOL(mod, symbol, ...) \
   { \
+    const char *aliases[] = {__VA_ARGS__}; \
+    for (uint __i = 0; __i < ARRAY_SIZE(aliases); __i++) { \
+      if ((*(uintptr_t*)&symbol = (uintptr_t)so_symbol(mod, aliases[__i]))) \
+        break; \
+    } \
     if (symbol == NULL) { \
-      const char *aliases[] = {__VA_ARGS__}; \
-      for (int __i = 0; __i < ARRAY_SIZE(aliases); __i++) { \
-        if (*(uintptr_t*)&symbol = (uintptr_t)so_symbol(mod, aliases[__i])) \
-          break; \
-      } \
-      if (symbol == NULL) { \
-        fatal_error("Symbol \"%s\" not found.\n", #symbol); \
-        exit(-1); \
-      } \
+      fatal_error("Symbol \"%s\" not found.\n", #symbol); \
+      exit(-1); \
     } \
   }
 
+#define FIND_SYMBOL(mod, symbol, ...) \
+  { \
+    const char *aliases[] = {__VA_ARGS__}; \
+    for (uint __i = 0; __i < ARRAY_SIZE(aliases); __i++) { \
+      if ((*(uintptr_t*)&symbol = (uintptr_t)so_symbol(mod, aliases[__i]))) \
+        break; \
+    } \
+    if (symbol == NULL) { \
+      warning("Symbol \"%s\" not found.\n", #symbol); \
+    } \
+  }
 
-#define MAX_DATA_SEG 8
+#define MAX_DATA_SEG 16
 ABI_ATTR typedef int (* init_array_t)();
 typedef struct so_module {
   struct so_module *next;
@@ -39,19 +61,25 @@ typedef struct so_module {
   // patch arena is allocated prior to the .text segment, while the cave is the padding region used
   // to align segments, and thus left free to use as a code cave (see "p_align" member of the
   // program header table entries).
-  intptr_t patch_blockid, text_blockid, data_blockid[MAX_DATA_SEG];
   uintptr_t patch_base, patch_head, cave_base, cave_head, text_base, data_base[MAX_DATA_SEG];
   size_t patch_size, cave_size, text_size, data_size[MAX_DATA_SEG];
   int n_data;
 
-  Elf32_Ehdr *ehdr;
-  Elf32_Phdr *phdr;
-  Elf32_Shdr *shdr;
+  Elf_Addr base;
 
-  Elf32_Dyn *dynamic;
-  Elf32_Sym *dynsym;
-  Elf32_Rel *reldyn;
-  Elf32_Rel *relplt;
+  Elf_Ehdr *ehdr;
+  Elf_Phdr *phdr;
+  Elf_Shdr *shdr;
+
+  Elf_Dyn *dynamic;
+  Elf_Sym *dynsym;
+  Elf_Rel *reldyn;
+  Elf_Rel *relplt;
+  uint8_t *droidreladyn; //packed sleb128 entries
+  uint8_t *droidreldyn;
+  Elf_Rela *reladyn;
+  Elf_Rela *relaplt;
+  void *relr; //rle bitmask entries
 
   init_array_t *init_array;
   uint32_t *hash;
@@ -60,7 +88,12 @@ typedef struct so_module {
   int num_dynsym;
   int num_reldyn;
   int num_relplt;
+  int num_droidreladyn;
+  int num_droidreldyn;
+  int num_reladyn;
+  int num_relaplt;
   int num_init_array;
+  int num_relr;
 
   char *soname;
   char *shstr;
@@ -68,7 +101,7 @@ typedef struct so_module {
 } so_module;
 
 typedef struct {
-  char *symbol;
+  const char *symbol;
   uintptr_t func;
 } DynLibFunction;
 
@@ -83,19 +116,14 @@ void hook_symbol(so_module *mod, const char *symbol, uintptr_t dst, int is_optio
 void hook_symbols(so_module *mod, DynLibHooks *hooks);
 
 int so_load(so_module *mod, const char *filename, uintptr_t load_addr, void *so_data, size_t sz);
-int so_relocate(so_module *mod);
-int so_resolve(so_module *mod);
+void so_relocate(so_module *mod);
+int so_static_overrides(so_module *mod);
+uintptr_t so_resolve_link(so_module *mod, const char *symbol);
 void so_initialize(so_module *mod);
 uintptr_t so_symbol(so_module *mod, const char *symbol);
-
-//Platform Specific Implementations
+int so_symbol_index(so_module *mod, const char *symbol);
 void so_symbol_fix_ldmia(so_module *mod, const char *symbol);
-int unrestricted_memcpy(void *dst, const void *src, size_t len);
-intptr_t block_alloc(int exec, uintptr_t base_addr, size_t sz);
-int block_valid(intptr_t block);
-void block_free(uintptr_t block, size_t sz);
-void *block_get_base_address(uintptr_t block);
-void so_flush_caches(so_module *mod, int write);
+uint32_t so_hash(const uint8_t *name);
 
 // Defined on a per-port basis on their specific main.c files
 extern DynLibFunction *so_static_patches[];    // Functions to be replaced in the binary

@@ -5,7 +5,7 @@ extern toml::table config;
 #include <fstream>
 #include "android.h"
 #include "javac.h"
-#include "platform.h"
+#include "logging.h"
 
 
 ///// Display

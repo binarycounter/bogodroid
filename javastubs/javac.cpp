@@ -1,6 +1,6 @@
 #include "baron/baron.h"
 #include "javac.h"
-#include "platform.h"
+#include "logging.h"
 
 
 ///// Classloader
