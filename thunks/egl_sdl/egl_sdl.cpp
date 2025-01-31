@@ -1,0 +1,198 @@
+#include "thunk_gen.h"
+#include "platform.h"
+#include "so_util.h"
+#include "glad_egl.h"
+#include "SDL2/SDL.h"
+
+SDL_Window *sdl_win;
+SDL_GLContext sdl_ctx;
+EGLDisplay egl_display;
+EGLContext egl_context;
+EGLSurface egl_surface;
+
+EGLBoolean eglSwapBuffers_impl(EGLDisplay display,
+ 	EGLSurface surface)
+{
+    //printf("Swap!\n");
+    SDL_GL_SwapWindow(sdl_win);
+    return EGL_TRUE;
+}
+
+//Just return the current display
+EGLDisplay eglGetDisplay_impl(NativeDisplayType native_display)
+{
+    // Initialize SDL with video, audio, joystick, and controller support
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        fatal_error("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+        // return -1;
+    }
+
+    sdl_win = SDL_CreateWindow("Teapot", 0, 0, 640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    if (sdl_win == NULL) {
+        fatal_error("Failed to create SDL Window: %s\n", SDL_GetError());
+        // return -1;
+    }
+
+    // Basic OpenGL ES 2.x setup
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+
+    sdl_ctx = SDL_GL_CreateContext(sdl_win);
+    if (sdl_ctx == NULL) {
+        fatal_error("Failed to create OpenGL Context: %s\n", SDL_GetError());
+        // return -1;
+    }
+    SDL_GL_MakeCurrent(sdl_win, sdl_ctx);
+
+    egl_display=((EGLDisplay (*)())SDL_GL_GetProcAddress("eglGetCurrentDisplay"))();
+    egl_context=((EGLDisplay (*)())SDL_GL_GetProcAddress("eglGetCurrentContext"))();
+    egl_surface=((EGLSurface (*)(EGLint))SDL_GL_GetProcAddress("eglGetCurrentSurface"))(EGL_DRAW);
+
+    return egl_display;
+}
+
+//Do not actually initialize, just return the EGL version number. 
+EGLBoolean eglInitialize_impl(EGLDisplay display, int* major, int* minor) {
+    #ifdef FAKE_EGL
+    if (major != NULL) *major = 1;
+    if (minor != NULL) *minor = 4;
+    return EGL_TRUE;
+    #endif
+    int temp_major = 0, temp_minor = 0; 
+    const char* versionString = ((const char* (*)(EGLDisplay, EGLint))SDL_GL_GetProcAddress("eglQueryString"))(display, EGL_VERSION);
+    if (!versionString) {
+        fprintf(stderr, "Failed to retrieve EGL version string.\n");
+        return EGL_FALSE;
+    }
+
+    if (sscanf(versionString, "%d.%d", &temp_major, &temp_minor) != 2) {
+        fprintf(stderr, "Failed to parse EGL version string: %s\n", versionString);
+        return EGL_FALSE;
+    }
+
+    if (major != NULL) *major = temp_major;
+    if (minor != NULL) *minor = temp_minor;
+
+    return EGL_TRUE;
+}
+
+//Do not actually search for configs. Just always return the config that the current context uses
+EGLBoolean eglChooseConfig_impl(EGLDisplay display, const EGLint* attribList, EGLConfig* configs, EGLint configSize, EGLint* numConfigs) {
+    #ifdef FAKE_EGL
+    *configs=malloc(1 * sizeof(EGLConfig));
+    *numConfigs=1;
+    return EGL_TRUE;
+    #endif
+
+
+    // Inline fetching of eglGetCurrentContext
+    EGLContext context = egl_context;
+    if (context == EGL_NO_CONTEXT) {
+        fprintf(stderr, "Failed to get current EGLContext.\n");
+        return EGL_FALSE;
+    }
+
+    EGLint configID;
+    if (!((EGLBoolean (*)(EGLDisplay, EGLContext, EGLint, EGLint*))SDL_GL_GetProcAddress("eglQueryContext"))(display, context, EGL_CONFIG_ID, &configID)) {
+        fprintf(stderr, "Failed to query EGL_CONFIG_ID.\n");
+        return EGL_FALSE;
+    }
+
+    EGLint totalConfigs;
+    if (!((EGLBoolean (*)(EGLDisplay, EGLConfig*, EGLint, EGLint*))SDL_GL_GetProcAddress("eglGetConfigs"))(display, NULL, 0, &totalConfigs)) {
+        fprintf(stderr, "Failed to get the number of EGLConfigs.\n");
+        return EGL_FALSE;
+    }
+
+    EGLConfig* allConfigs = (EGLConfig*)malloc(totalConfigs * sizeof(EGLConfig));
+    if (!((EGLBoolean (*)(EGLDisplay, EGLConfig*, EGLint, EGLint*))SDL_GL_GetProcAddress("eglGetConfigs"))(display, allConfigs, totalConfigs, &totalConfigs)) {
+        fprintf(stderr, "Failed to retrieve EGLConfigs.\n");
+        free(allConfigs);
+        return EGL_FALSE;
+    }
+
+    // eglGetConfigAttrib to find the matching config
+    EGLConfig matchingConfig = NULL;
+    for (EGLint i = 0; i < totalConfigs; i++) {
+        EGLint id;
+        if (((EGLBoolean (*)(EGLDisplay, EGLConfig, EGLint, EGLint*))SDL_GL_GetProcAddress("eglGetConfigAttrib"))(display, allConfigs[i], EGL_CONFIG_ID, &id) && id == configID) {
+            matchingConfig = allConfigs[i];
+            break;
+        }
+    }
+    free(allConfigs);
+
+    if (!matchingConfig) {
+        fprintf(stderr, "Failed to find a matching EGLConfig.\n");
+        return EGL_FALSE;
+    }
+
+    // Populate the results
+    if (configs && configSize > 0) {
+        configs[0] = matchingConfig;
+    }
+    if (numConfigs) {
+        *numConfigs = 1; // Always return exactly 1 config
+    }
+
+    return EGL_TRUE;
+}
+
+EGLSurface eglCreateWindowSurface_impl(	EGLDisplay display,EGLConfig config,NativeWindowType native_window,EGLint const * attrib_list)
+{
+    #ifdef FAKE_EGL
+    return (EGLSurface)0xDEAD;
+    #endif
+    return egl_surface;
+}
+
+
+EGLBoolean eglQuerySurface_impl(EGLDisplay display, EGLSurface surface, EGLint attribute, EGLint * value)
+{
+    #ifdef FAKE_EGL
+    if(attribute==EGL_WIDTH) *value=640;
+    if(attribute==EGL_HEIGHT) *value=480;
+    return EGL_TRUE;
+    #endif
+    return ((EGLBoolean (*)(EGLDisplay, EGLSurface, EGLint, EGLint*))SDL_GL_GetProcAddress("eglQuerySurface"))(display, surface, attribute, value);
+}
+
+EGLContext eglCreateContext_impl(	EGLDisplay display,
+ 	EGLConfig config,
+ 	EGLContext share_context,
+ 	EGLint const * attrib_list)
+    {
+    #ifdef FAKE_EGL
+    return (EGLContext)0xDEAD;
+    #endif
+        return egl_context;
+    }
+
+EGLBoolean eglMakeCurrent_impl(	EGLDisplay display,
+ 	EGLSurface draw,
+ 	EGLSurface read,
+ 	EGLContext context)
+    {
+        return EGL_TRUE;
+    }
+
+
+// Actually implemented in egl.cpp
+ABI_ATTR __eglMustCastToProperFunctionPointerType EGLAPIENTRY eglGetProcAddress_impl (const char *procname);
+
+
+
+
+
+DynLibFunction symtable_egl_sdl[] = {
+NO_THUNK("eglSwapBuffers", (uintptr_t)&eglSwapBuffers_impl),
+NO_THUNK("eglGetDisplay", (uintptr_t)&eglGetDisplay_impl),
+NO_THUNK("eglInitialize", (uintptr_t)&eglInitialize_impl),
+NO_THUNK("eglChooseConfig", (uintptr_t)&eglChooseConfig_impl),
+NO_THUNK("eglCreateWindowSurface", (uintptr_t)&eglCreateWindowSurface_impl),
+NO_THUNK("eglQuerySurface", (uintptr_t)&eglQuerySurface_impl),
+NO_THUNK("eglCreateContext", (uintptr_t)&eglCreateContext_impl),
+NO_THUNK("eglMakeCurrent", (uintptr_t)&eglMakeCurrent_impl),
+NO_THUNK("eglGetProcAddress", (uintptr_t)&eglGetProcAddress_impl),
+    {NULL, (uintptr_t)NULL}};

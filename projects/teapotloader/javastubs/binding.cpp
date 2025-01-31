@@ -1,6 +1,7 @@
 #include "baron/baron.h"
 #include "android.h"
 #include "javac.h"
+#include "teapot.h"
 
 
 void InitJNIBinding(FakeJni::Jvm *vm)
@@ -13,17 +14,7 @@ void InitJNIBinding(FakeJni::Jvm *vm)
     vm->registerClass<jnivm::java::util::Set>();
     vm->registerClass<jnivm::java::util::Iterator>();
     vm->registerClass<jnivm::java::util::Scanner>();
-    // vm->registerClass<jnivm::java::util::NoSuchElementException>();
-    // vm->registerClass<jnivm::com::unity3d::player::NativeLoader>();
-    // vm->registerClass<jnivm::com::unity3d::player::UnityPlayer>();
-    // vm->registerClass<jnivm::com::unity3d::player::GoogleARCoreApi>();
-    // vm->registerClass<jnivm::com::unity3d::player::Camera2Wrapper>();
-    // vm->registerClass<jnivm::com::unity3d::player::HFPStatus>();
-    // vm->registerClass<jnivm::com::unity3d::player::AudioVolumeHandler>();
-    // vm->registerClass<jnivm::com::unity3d::player::UnityCoreAssetPacksStatusCallbacks>();
-    // vm->registerClass<jnivm::com::unity3d::player::OrientationLockListener>();
-    // vm->registerClass<jnivm::com::google::androidgamesdk::ChoreographerCallback>();
-    // vm->registerClass<jnivm::com::google::androidgamesdk::SwappyDisplayManager>();
+
     vm->registerClass<jnivm::android::view::Display>();
     vm->registerClass<jnivm::android::hardware::display::DisplayManager>();
     vm->registerClass<jnivm::android::os::Environment>();
@@ -33,9 +24,9 @@ void InitJNIBinding(FakeJni::Jvm *vm)
     vm->registerClass<jnivm::android::os::Bundle>();
     vm->registerClass<jnivm::android::os::Build>();
     vm->registerClass<jnivm::android::os::BuildVersion>();
+    vm->registerClass<jnivm::android::content::Context>();
     vm->registerClass<jnivm::android::app::Activity>();
     vm->registerClass<jnivm::android::app::NativeActivity>();
-    vm->registerClass<jnivm::android::content::Context>();
     vm->registerClass<jnivm::android::content::SharedPreferences>();
     vm->registerClass<jnivm::android::content::SharedPreferencesEditor>();
     vm->registerClass<jnivm::android::content::Intent>();
@@ -43,6 +34,8 @@ void InitJNIBinding(FakeJni::Jvm *vm)
     vm->registerClass<jnivm::android::content::pm::PackageManager>();
     vm->registerClass<jnivm::android::content::pm::PackageInfo>();
     vm->registerClass<jnivm::android::content::pm::ApplicationInfo>();
+
+    vm->registerClass<jnivm::com::sample::teapot::TeapotNativeActivity>();
 
 
     HookStringExtensions(vm);

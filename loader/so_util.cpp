@@ -19,6 +19,10 @@
 // - PLT0 stub hook for easier debugging when the application crashes with a missing import
 
 #define __USE_MISC
+#include <execinfo.h>
+#include <iostream>
+#include <cstdlib>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -266,6 +270,15 @@ int so_load(so_module *mod, const char *filename, uintptr_t load_addr, void *so_
 
 void reloc_err(uintptr_t got0)
 {
+    void *array[50];  // Array to store stack trace addresses
+    size_t size;
+
+    // Get the stack trace
+    size = backtrace(array, 50);
+
+    // Print the stack trace
+    std::cerr << "Unknown Symbol encountered\n";
+    backtrace_symbols_fd(array, size, STDERR_FILENO);
   // Find to which module this missing symbol belongs
   int found = 0;
   so_module *curr = head;

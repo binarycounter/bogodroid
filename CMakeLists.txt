@@ -23,19 +23,27 @@ platform/common/toml_include.cpp
 loader/so_util.cpp
 loader/so_util_arm64.cpp
 
-#thunks/libc/libc_table.cpp
+thunks/libc/libc_table.cpp
+thunks/libc/aeabi.cpp
+thunks/libc/ctype.cpp
+thunks/libc/fortify.cpp
+thunks/libc/legacy.cpp
+thunks/libc/misc.cpp
+thunks/libc/pthread.cpp
+thunks/libc/stdio.cpp
+thunks/libc/time64.cpp
 
-# platform/linux/so_util_linux.c
-# platform/linux/physram.c
-# bridges/pthread_bridge.c
-# bridges/misc_bridges.c
-# bridges/stdio_bridge.c
-# bridges/gles2_bridge.c
-# bridges/fcntl_bridge.c
-# bridges/ctype_bridge.c
-# bridges/math_bridge.c
-# bridges/gles2_bridge.c
-# bridges/ndk_bridge.cpp
+thunks/ndk/ndk.cpp
+thunks/ndk/alooper.c
+thunks/ndk/asset_manager.c
+
+
+thunks/khronos/egl.cpp
+thunks/khronos/gles2.cpp
+
+thunks/egl_sdl/egl_sdl.cpp
+
+
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PUBLIC 
@@ -44,6 +52,8 @@ ${CMAKE_SOURCE_DIR}/libjnivm/include
 ${CMAKE_SOURCE_DIR}/loader/
 ${CMAKE_SOURCE_DIR}/thunks/
 ${CMAKE_SOURCE_DIR}/thunks/libc/
+${CMAKE_SOURCE_DIR}/thunks/ndk/
+${CMAKE_SOURCE_DIR}/thunks/khronos/
 ${CMAKE_SOURCE_DIR}/platform/common
 ${CMAKE_SOURCE_DIR}/bridges
 ${CMAKE_SOURCE_DIR}/javastubs
@@ -54,9 +64,10 @@ ${PROJ_SOURCE_DIR}/javastubs
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC TOML_HEADER_ONLY=0)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC EnableJNIVMGC)
-target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC JNIVM_FAKE_JNI_SYNTAX=1)
+# target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC JNIVM_FAKE_JNI_SYNTAX=1)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC JNI_DEBUG)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC VERBOSE_LOG)
+# target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC FAKE_EGL)
 
-target_link_libraries(${CMAKE_PROJECT_NAME} ${CMAKE_SOURCE_DIR}/libjnivm/build/libfake-jni.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libbaron.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libjnivm.a dl pthread)
-set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 17 CXX_STANDARD_REQUIRED ON)
+target_link_libraries(${CMAKE_PROJECT_NAME} ${CMAKE_SOURCE_DIR}/libjnivm/build/libfake-jni.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libbaron.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libjnivm.a SDL2 dl pthread bsd)
+set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
