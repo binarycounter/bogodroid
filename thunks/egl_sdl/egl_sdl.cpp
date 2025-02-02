@@ -13,7 +13,6 @@ EGLSurface egl_surface;
 EGLBoolean eglSwapBuffers_impl(EGLDisplay display,
  	EGLSurface surface)
 {
-    //printf("Swap!\n");
     SDL_GL_SwapWindow(sdl_win);
     return EGL_TRUE;
 }
@@ -36,7 +35,7 @@ EGLDisplay eglGetDisplay_impl(NativeDisplayType native_display)
     // Basic OpenGL ES 2.x setup
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 
     sdl_ctx = SDL_GL_CreateContext(sdl_win);
     if (sdl_ctx == NULL) {
@@ -180,9 +179,6 @@ EGLBoolean eglMakeCurrent_impl(	EGLDisplay display,
 
 // Actually implemented in egl.cpp
 ABI_ATTR __eglMustCastToProperFunctionPointerType EGLAPIENTRY eglGetProcAddress_impl (const char *procname);
-
-
-
 
 
 DynLibFunction symtable_egl_sdl[] = {

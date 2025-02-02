@@ -114,6 +114,18 @@ BEGIN_NATIVE_DESCRIPTOR(jnivm::java::util::Scanner)
 {FakeJni::Function<&Scanner::next>{}, "next", FakeJni::JMethodID::PUBLIC },
 END_NATIVE_DESCRIPTOR
 
+void InitJNIJavaClasses(FakeJni::Jvm *vm)
+{
+    verbose("JBRIDGE","Initializing Java JNI Classes");
+    vm->registerClass<jnivm::java::lang::ClassLoader>();
+    vm->registerClass<jnivm::java::lang::StringBuilder>();
+    vm->registerClass<jnivm::java::io::InputStream>();
+    vm->registerClass<jnivm::java::io::File>();
+    vm->registerClass<jnivm::java::util::Map>();
+    vm->registerClass<jnivm::java::util::Set>();
+    vm->registerClass<jnivm::java::util::Iterator>();
+    vm->registerClass<jnivm::java::util::Scanner>();
+}
 
 
 ///// Extensions to built-in Java classes

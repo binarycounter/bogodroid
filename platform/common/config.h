@@ -1,0 +1,1 @@
+bool init_config(const char* config_path);

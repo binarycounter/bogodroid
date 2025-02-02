@@ -360,3 +360,28 @@ BEGIN_NATIVE_DESCRIPTOR(jnivm::android::content::res::AssetManager){FakeJni::Con
     {FakeJni::Field<&Environment::MEDIA_MOUNTED>{}, "MEDIA_MOUNTED", FakeJni::JFieldID::STATIC},
     {FakeJni::Function<&Environment::getExternalStorageState>{}, "getExternalStorageState", FakeJni::JMethodID::STATIC},
     END_NATIVE_DESCRIPTOR
+
+
+void InitJNIAndroidClasses(FakeJni::Jvm *vm)
+{
+    verbose("JBRIDGE","Initializing Android JNI Classes");
+    vm->registerClass<jnivm::android::view::Display>();
+    vm->registerClass<jnivm::android::hardware::display::DisplayManager>();
+    vm->registerClass<jnivm::android::os::Build>();
+    vm->registerClass<jnivm::android::os::BuildVersion>();
+    vm->registerClass<jnivm::android::os::Process>();
+    vm->registerClass<jnivm::android::os::Bundle>();
+    vm->registerClass<jnivm::android::os::Looper>();
+    vm->registerClass<jnivm::android::os::Handler>();
+    vm->registerClass<jnivm::android::os::Environment>();
+    vm->registerClass<jnivm::android::content::pm::PackageInfo>();
+    vm->registerClass<jnivm::android::content::pm::ApplicationInfo>();
+    vm->registerClass<jnivm::android::content::pm::PackageManager>();
+    vm->registerClass<jnivm::android::content::res::AssetManager>();
+    vm->registerClass<jnivm::android::content::SharedPreferences>();
+    vm->registerClass<jnivm::android::content::SharedPreferencesEditor>();
+    vm->registerClass<jnivm::android::content::Context>();
+    vm->registerClass<jnivm::android::content::Intent>();
+    vm->registerClass<jnivm::android::app::Activity>();
+    vm->registerClass<jnivm::android::app::NativeActivity>();
+}

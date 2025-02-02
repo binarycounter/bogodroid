@@ -4,6 +4,9 @@
 
 #include "toml++/toml.hpp"
 toml::table config;
+#include "config.h"
+
+#include <unistd.h>
 #include <dlfcn.h>
 #include <filesystem>
 #include <iostream>
@@ -15,11 +18,10 @@ toml::table config;
 #include <stdlib.h>
 #include "platform.h"
 #include "so_util.h"
-// #include "symtables.h"
-#include <csignal>
-#include <unistd.h>
+#include "io_util.h"
+
 #include "ndk.h"
-#include "asset_manager.h"
+#include "anative_activity.h"
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_hints.h>
@@ -27,19 +29,17 @@ toml::table config;
 #include "glad.h"
 #include "glad_egl.h"
 
+#include "debug_utils.h"
+
 
 using namespace FakeJni;
+
+
 
 extern DynLibFunction symtable_libc[];
 extern DynLibFunction symtable_ndk[];
 extern DynLibFunction symtable_gles2[];
 extern DynLibFunction symtable_egl_sdl[];
-
-extern SDL_Window *sdl_win;
-extern SDL_GLContext sdl_ctx;
-extern EGLDisplay egl_display;
-extern EGLContext egl_context;
-extern EGLSurface egl_surface;
 
 DynLibFunction *so_static_patches[32] = {
     NULL,
@@ -53,117 +53,28 @@ DynLibFunction *so_dynamic_libraries[32] = {
     NULL
 };
 
-void printContextInfo() {
-    // Print OpenGL information
-    const char* glVersion = (const char*)glad_glGetString(GL_VERSION);
-    const char* glVendor = (const char*)glad_glGetString(GL_VENDOR);
-    const char* glRenderer = (const char*)glad_glGetString(GL_RENDERER);
-    const char* glExtensions = (const char*)glad_glGetString(GL_EXTENSIONS);
-
-    if (glVersion) {
-        printf("OpenGL Version: %s\n", glVersion);
-    } else {
-        printf("Failed to retrieve OpenGL version.\n");
-    }
-
-    if (glVendor) {
-        printf("OpenGL Vendor: %s\n", glVendor);
-    } else {
-        printf("Failed to retrieve OpenGL vendor.\n");
-    }
-
-    if (glRenderer) {
-        printf("OpenGL Renderer: %s\n", glRenderer);
-    } else {
-        printf("Failed to retrieve OpenGL renderer.\n");
-    }
-
-    if (glExtensions) {
-        printf("OpenGL Extensions: %s\n", glExtensions);
-    } else {
-        printf("Failed to retrieve OpenGL extensions.\n");
-    }
-}
-
-// Signal handler to handle segmentation faults
-void signalHandler(int signal) {
-    void *array[50];  // Array to store stack trace addresses
-    size_t size;
-
-    // Get the stack trace
-    size = backtrace(array, 50);
-
-    // Print the stack trace
-    std::cerr << "Error: signal " << signal << ":\n";
-    backtrace_symbols_fd(array, size, STDERR_FILENO);
-
-    // Exit the program
-    exit(1);
-}
+extern SDL_Window *sdl_win;
+extern SDL_GLContext sdl_ctx;
+extern EGLDisplay egl_display;
+extern EGLContext egl_context;
+extern EGLSurface egl_surface;
 
 
-bool load_so_from_file(so_module *mod, const char *filename, uintptr_t addr)
-{
-  std::ifstream file(filename, std::ios::binary);
-  if (!file.is_open())
-  {
-    std::cerr << "Error opening file: " << filename << std::endl;
-    return false;
-  }
-  // Determine the file size
-  file.seekg(0, std::ios::end);
-  std::streampos fileSize = file.tellg();
-  file.seekg(0, std::ios::beg);
-  char *buffer = new char[fileSize];
-  file.read(buffer, fileSize);
-  file.close();
-  so_load(mod, "", addr, buffer, fileSize);
-  return true;
-}
-
-void print_native_callbacks(ANativeActivity nActivity)
-{
-    // Print function pointers
-    printf("onStart: %p\n", (void*)nActivity.callbacks->onStart);
-    printf("onResume: %p\n", (void*)nActivity.callbacks->onResume);
-    printf("onSaveInstanceState: %p\n", (void*)nActivity.callbacks->onSaveInstanceState);
-    printf("onPause: %p\n", (void*)nActivity.callbacks->onPause);
-    printf("onStop: %p\n", (void*)nActivity.callbacks->onStop);
-    printf("onDestroy: %p\n", (void*)nActivity.callbacks->onDestroy);
-    printf("onWindowFocusChanged: %p\n", (void*)nActivity.callbacks->onWindowFocusChanged);
-    printf("onNativeWindowCreated: %p\n", (void*)nActivity.callbacks->onNativeWindowCreated);
-    printf("onNativeWindowResized: %p\n", (void*)nActivity.callbacks->onNativeWindowResized);
-    printf("onNativeWindowRedrawNeeded: %p\n", (void*)nActivity.callbacks->onNativeWindowRedrawNeeded);
-    printf("onNativeWindowDestroyed: %p\n", (void*)nActivity.callbacks->onNativeWindowDestroyed);
-    printf("onInputQueueCreated: %p\n", (void*)nActivity.callbacks->onInputQueueCreated);
-    printf("onInputQueueDestroyed: %p\n", (void*)nActivity.callbacks->onInputQueueDestroyed);
-    printf("onContentRectChanged: %p\n", (void*)nActivity.callbacks->onContentRectChanged);
-    printf("onConfigurationChanged: %p\n", (void*)nActivity.callbacks->onConfigurationChanged);
-    printf("onLowMemory: %p\n", (void*)nActivity.callbacks->onLowMemory);
-}
 
 int main(int argc, char *argv[])
 {
-    // Register the signal handler for SIGSEGV
-    signal(SIGSEGV, signalHandler);
+  print_backtrace_on_segfault(); //Registers a signal handler to print backtrace on segfaults
+
+    if(argc<2)
+    {
+        fatal_error("Usage: %s <config file>\n",argv[0]);
+        return -1;
+    }
+
+    init_config(argv[1]);
 
 
-  config=toml::parse_file(argv[1]);
-  auto game_path=config["paths"]["game_files"].value_or<std::string>("");
-  if (chdir(game_path.c_str()) != 0)
-  {
-    std::cerr << "Could not change directory to " << game_path << std::endl;
-    return 1;
-  }
-  else
-  {
-     std::cout << "Changed working directory to " << game_path << std::endl;
-  }
-
-// SDL_SetHint("SDL_VIDEO_X11_FORCE_EGL","1");
-
-
-      // Initialize SDL with video, audio, joystick, and controller support
+    // Initialize SDL 
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         fatal_error("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
         return -1;
@@ -194,7 +105,7 @@ int main(int argc, char *argv[])
     load_egl_funcs();
     load_gles2_funcs();
 
-    printContextInfo();
+    print_gl_info();
 
     SDL_Quit();
 
@@ -213,18 +124,7 @@ int main(int argc, char *argv[])
   }
 
 
-
-
-
-  ANativeActivity nActivity;
-  FakeJni::LocalFrame frame(vm);
-  memset( &nActivity, 0, sizeof( ANativeActivity ) );
-  nActivity.callbacks=new ANativeActivityCallbacks;
-  memset( nActivity.callbacks, 0, sizeof( ANativeActivityCallbacks ) );
-  nActivity.vm=&vm;
-  nActivity.env=&(frame.getJniEnv());
-  nActivity.clazz=std::make_shared<jnivm::com::sample::teapot::TeapotNativeActivity>();
-  nActivity.assetManager=AAssetManager_create("assets");
+  ANativeActivity nActivity = ANativeActivity_create<jnivm::com::sample::teapot::TeapotNativeActivity>(&vm, "assets");
 
   printf("%p %p\n",&nActivity,nActivity.callbacks);
   printf("calling ANativeActivity_onCreate from libTeapot\n");

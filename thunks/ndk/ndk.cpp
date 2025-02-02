@@ -11,6 +11,7 @@ extern toml::table config;
 #include <poll.h>
 #include "alooper.h"
 #include "asset_manager.h"
+#include "anative_activity.h"
 
 ABI_ATTR AConfiguration *AConfiguration_new()
 {
@@ -92,69 +93,6 @@ ABI_ATTR int32_t AConfiguration_getUiModeNight(AConfiguration *aconfig)
     return 0;
 }
 
-// ABI_ATTR ALooper *ALooper_prepare(int opts)
-// {
-//     pid_t tid = syscall(SYS_gettid);
-//     verbose("NATIVE", "looper prepare. Existing loopers for tid %d = %d", tid, loopers.count(tid));
-//     if (loopers.count(tid) > 0)
-//         return loopers[tid];
-
-//     ALooper *looper = new ALooper();
-//     looper->events = new std::vector<LooperEntry>();
-//     loopers.insert(std::pair<pid_t, ALooper *>(tid, looper));
-//     verbose("NATIVE", "looper prepare. New looper for tid %d = %p", tid, looper);
-//     return looper;
-// }
-
-// ABI_ATTR int32_t ALooper_addFd(ALooper *looper, int fd, int ident, int events, void *callback, void *data)
-// {
-//     verbose("NATIVE", "looper addFd %p %d %d %d %p %p", looper, fd, ident, events, callback, *(int *)data);
-//     LooperEntry entry = {};
-//     entry.fd = fd;
-//     entry.ident = ident;
-//     entry.events = events;
-//     entry.callback = callback;
-//     entry.data = data;
-//     looper->events->push_back(entry);
-//     return 1;
-// }
-
-// ABI_ATTR int32_t ALooper_pollAll(int timeout, int *outFd, int *outEvents, void **outData)
-// {
-//     //verbose("NATIVE", "pollAll %p %p %p", outFd, outEvents, outData);
-
-//     for (auto looper_pair : loopers)
-//     {
-//         //verbose("NATIVE", "processing looper for thread %d", looper_pair.first);
-//         for (LooperEntry entry : *(looper_pair.second->events))
-//         {
-//             //verbose("NATIVE", "processing fd %d", entry.fd);
-//             fd_set read_fds;
-//             FD_ZERO(&read_fds);         
-//             FD_SET(entry.fd, &read_fds); 
-//             struct timeval select_timeout;
-//             select_timeout.tv_sec = 0;
-//             select_timeout.tv_usec = 0;
-//             int fds = select(entry.fd+1, &read_fds, NULL, NULL, &select_timeout);
-//             if (fds > 0)
-//             {
-//                 if (FD_ISSET(entry.fd, &read_fds))
-//                 {
-//                     //verbose("NATIVE", "new data in fd %d", entry.fd);
-//                     if(outFd!=NULL) *outFd=entry.fd;
-//                     if(outEvents!=NULL) *outEvents=entry.events;
-//                     if(outData!=NULL) *outData=entry.data;
-//                     return entry.ident;
-//                 }
-//             }
-//         }
-//     }
-
-//     usleep(timeout * 1000);
-//     return -3;
-// }
-
-
 ABI_ATTR int32_t ret0()
 {
     return 0;
@@ -211,3 +149,6 @@ NO_THUNK("AAsset_getBuffer",(uintptr_t)&AAsset_getBuffer),
 NO_THUNK("AAsset_getLength",(uintptr_t)&AAsset_getLength),
 NO_THUNK("AAsset_close",(uintptr_t)&AAsset_close),
     {NULL, (uintptr_t)NULL}};
+
+
+

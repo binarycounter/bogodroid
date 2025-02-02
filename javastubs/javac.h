@@ -4,6 +4,7 @@
 #include "baron/baron.h"
 #include <fstream>
 
+void InitJNIJavaClasses(FakeJni::Jvm *vm);
 
 void HookStringExtensions(FakeJni::Jvm *vm);
 void HookClassExtensions(FakeJni::Jvm *vm);

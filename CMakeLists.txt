@@ -20,8 +20,13 @@ ${PROJ_SOURCES}
 javastubs/android.cpp
 javastubs/javac.cpp
 platform/common/toml_include.cpp
+platform/common/debug_utils.cpp
+platform/common/config.cpp
+
+
 loader/so_util.cpp
 loader/so_util_arm64.cpp
+loader/io_util.cpp
 
 thunks/libc/libc_table.cpp
 thunks/libc/aeabi.cpp
@@ -36,7 +41,6 @@ thunks/libc/time64.cpp
 thunks/ndk/ndk.cpp
 thunks/ndk/alooper.c
 thunks/ndk/asset_manager.c
-
 
 thunks/khronos/egl.cpp
 thunks/khronos/gles2.cpp

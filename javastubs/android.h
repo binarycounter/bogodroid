@@ -3,6 +3,9 @@
 
 #include "baron/baron.h"
 #include "javac.h"
+
+void InitJNIAndroidClasses(FakeJni::Jvm *vm);
+
 namespace jnivm
 {
     namespace android
