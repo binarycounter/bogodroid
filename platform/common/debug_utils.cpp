@@ -9,38 +9,6 @@
 #include <execinfo.h>
 #include <unistd.h>
 
-void print_gl_info() {
-    // Print OpenGL information
-    const char* glVersion = (const char*)glad_glGetString(GL_VERSION);
-    const char* glVendor = (const char*)glad_glGetString(GL_VENDOR);
-    const char* glRenderer = (const char*)glad_glGetString(GL_RENDERER);
-    const char* glExtensions = (const char*)glad_glGetString(GL_EXTENSIONS);
-
-    if (glVersion) {
-        printf("OpenGL Version: %s\n", glVersion);
-    } else {
-        printf("Failed to retrieve OpenGL version.\n");
-    }
-
-    if (glVendor) {
-        printf("OpenGL Vendor: %s\n", glVendor);
-    } else {
-        printf("Failed to retrieve OpenGL vendor.\n");
-    }
-
-    if (glRenderer) {
-        printf("OpenGL Renderer: %s\n", glRenderer);
-    } else {
-        printf("Failed to retrieve OpenGL renderer.\n");
-    }
-
-    if (glExtensions) {
-        printf("OpenGL Extensions: %s\n", glExtensions);
-    } else {
-        printf("Failed to retrieve OpenGL extensions.\n");
-    }
-}
-
 void print_native_callbacks(ANativeActivity nActivity)
 {
     printf("onStart: %p\n", (void*)nActivity.callbacks->onStart);
@@ -61,7 +29,7 @@ void print_native_callbacks(ANativeActivity nActivity)
     printf("onLowMemory: %p\n", (void*)nActivity.callbacks->onLowMemory);
 }
 
-void signal_handler(int signal) {
+void segfault_handler(int signal) {
     void *array[50];  // Array to store stack trace addresses
     size_t size;
 
@@ -76,7 +44,23 @@ void signal_handler(int signal) {
     exit(1);
 }
 
+void exit_handler(int signal) {
+    printf("Caught signal %d, exiting...\n", signal);
+    exit(0);
+}
+
 void print_backtrace_on_segfault()
 {
-    signal(SIGSEGV, signal_handler);
+    signal(SIGSEGV, segfault_handler);
+}
+
+void exit_on_signals()
+{
+    struct sigaction sa;
+    sa.sa_handler = exit_handler;
+    sa.sa_flags = 0;
+    sigemptyset(&sa.sa_mask);
+
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 }

@@ -1,7 +1,9 @@
+#include "egl_sdl.h"
 #include "thunk_gen.h"
 #include "platform.h"
 #include "so_util.h"
 #include "glad_egl.h"
+#include "gles2.h"
 #include "SDL2/SDL.h"
 
 SDL_Window *sdl_win;
@@ -192,3 +194,64 @@ NO_THUNK("eglCreateContext", (uintptr_t)&eglCreateContext_impl),
 NO_THUNK("eglMakeCurrent", (uintptr_t)&eglMakeCurrent_impl),
 NO_THUNK("eglGetProcAddress", (uintptr_t)&eglGetProcAddress_impl),
     {NULL, (uintptr_t)NULL}};
+
+
+
+//Internal use, do not put these in the symtable
+
+void sdl_initialize_gles()
+{
+    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+        fatal_error("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
+    }
+    sdl_win = SDL_CreateWindow("Loader", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED ,1, 1, SDL_WINDOW_HIDDEN | SDL_WINDOW_OPENGL);
+    if (sdl_win == NULL) {
+        fatal_error("Failed to create SDL Window: %s\n", SDL_GetError());
+    }
+
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+
+    sdl_ctx = SDL_GL_CreateContext(sdl_win);
+    if (sdl_ctx == NULL) {
+        fatal_error("Failed to create OpenGL Context: %s\n", SDL_GetError());
+    }
+
+    load_egl_funcs();
+    load_gles2_funcs();
+
+    // Print OpenGL information
+    const char* glVersion = (const char*)glad_glGetString(GL_VERSION);
+    const char* glVendor = (const char*)glad_glGetString(GL_VENDOR);
+    const char* glRenderer = (const char*)glad_glGetString(GL_RENDERER);
+    const char* glExtensions = (const char*)glad_glGetString(GL_EXTENSIONS);
+
+    if (glVersion) {
+        printf("OpenGL Version: %s\n", glVersion);
+    } else {
+        printf("Failed to retrieve OpenGL version.\n");
+    }
+
+    if (glVendor) {
+        printf("OpenGL Vendor: %s\n", glVendor);
+    } else {
+        printf("Failed to retrieve OpenGL vendor.\n");
+    }
+
+    if (glRenderer) {
+        printf("OpenGL Renderer: %s\n", glRenderer);
+    } else {
+        printf("Failed to retrieve OpenGL renderer.\n");
+    }
+
+    if (glExtensions) {
+        printf("OpenGL Extensions: %s\n", glExtensions);
+    } else {
+        printf("Failed to retrieve OpenGL extensions.\n");
+    }
+
+    SDL_GL_DeleteContext(sdl_ctx);
+    SDL_DestroyWindow(sdl_win);
+    SDL_Quit();
+}

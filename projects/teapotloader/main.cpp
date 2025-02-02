@@ -28,13 +28,10 @@ toml::table config;
 #include "gles2.h"
 #include "glad.h"
 #include "glad_egl.h"
-
+#include "egl_sdl.h"
 #include "debug_utils.h"
 
-
 using namespace FakeJni;
-
-
 
 extern DynLibFunction symtable_libc[];
 extern DynLibFunction symtable_ndk[];
@@ -59,11 +56,10 @@ extern EGLDisplay egl_display;
 extern EGLContext egl_context;
 extern EGLSurface egl_surface;
 
-
-
 int main(int argc, char *argv[])
 {
-  print_backtrace_on_segfault(); //Registers a signal handler to print backtrace on segfaults
+    print_backtrace_on_segfault(); //Registers a signal handler to print backtrace on segfaults
+    exit_on_signals(); //Exits when CTRL-C is presset (or SIGINT or SIGTERM is received)
 
     if(argc<2)
     {
@@ -71,71 +67,39 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    // Init config, GLES pointers, JNI VN and bindings
     init_config(argv[1]);
+    sdl_initialize_gles();
+    Baron::Jvm vm;
+    InitJNIBinding(&vm);
 
-
-    // Initialize SDL 
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        fatal_error("SDL could not initialize! SDL_Error: %s\n", SDL_GetError());
-        return -1;
-    }
-
-
-
-    sdl_win = SDL_CreateWindow("Teapot", 0, 0, 640, 480, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
-    if (sdl_win == NULL) {
-        fatal_error("Failed to create SDL Window: %s\n", SDL_GetError());
-        return -1;
-    }
-
-    // Basic OpenGL ES 2.x setup
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-
-    sdl_ctx = SDL_GL_CreateContext(sdl_win);
-    if (sdl_ctx == NULL) {
-        fatal_error("Failed to create OpenGL Context: %s\n", SDL_GetError());
-        return -1;
-    }
-    SDL_GL_MakeCurrent(sdl_win, sdl_ctx);
-
-    // The libraries are loaded by SDL2.0, and the API entry points by the following
-    // functions using the GLAD generated headers.
-    load_egl_funcs();
-    load_gles2_funcs();
-
-    print_gl_info();
-
-    SDL_Quit();
-
-  Baron::Jvm vm;
-  InitJNIBinding(&vm);
-
-
-  printf("Loading libTeapot\n");
-  so_module lmain = {};
-  uintptr_t addr_lmain = 0x50000000;
-  const char *path_lmain = "lib/arm64-v8a/libTeapotNativeActivity.so";
-  if (!load_so_from_file(&lmain, path_lmain, addr_lmain))
-  {
+    // Load the main so file
+    printf("Loading libTeapot\n");
+    so_module lmain = {};
+    uintptr_t addr_lmain = 0x50000000;
+    const char *path_lmain = "lib/arm64-v8a/libTeapotNativeActivity.so";
+    if (!load_so_from_file(&lmain, path_lmain, addr_lmain))
+    {
     printf("Failed to load libTeapot.\n");
     return 1;
-  }
+    }
 
+    // Create the ANativeActivity and NativeActivity bindings
+    ANativeActivity nActivity = ANativeActivity_create<jnivm::com::sample::teapot::TeapotNativeActivity>(&vm, "assets");
 
-  ANativeActivity nActivity = ANativeActivity_create<jnivm::com::sample::teapot::TeapotNativeActivity>(&vm, "assets");
-
-  printf("%p %p\n",&nActivity,nActivity.callbacks);
-  printf("calling ANativeActivity_onCreate from libTeapot\n");
-  auto mainOnCreate = (jint(*)(ANativeActivity* act, void* savedState, size_t savedStateSize))(so_symbol(&lmain, "ANativeActivity_onCreate")); 
+    // Fetch pointer to ANativeActivity_onCreate from the so file...
+    printf("calling ANativeActivity_onCreate from libTeapot\n");
+    auto mainOnCreate = (jint(*)(ANativeActivity* act, void* savedState, size_t savedStateSize))(so_symbol(&lmain, "ANativeActivity_onCreate")); 
+    // and call it. This populates the ANativeActivity Callback struct with function pointers
     mainOnCreate(&nActivity, NULL, 0);
 
     print_native_callbacks(nActivity);
 
+    //Cretate a Window
     ANativeWindow nWindow;
     memset( &nWindow, 0, sizeof( ANativeWindow ) );
 
+    //Start calling some of those callback functions, simulating an Android app initializing
     printf("calling ANativeActivity_onNativeWindowCreated from libTeapot\n");
     nActivity.callbacks->onNativeWindowCreated(&nActivity,&nWindow);
 
@@ -145,20 +109,16 @@ int main(int argc, char *argv[])
     printf("calling ANativeActivity_onResume from libTeapot\n");
     nActivity.callbacks->onResume(&nActivity);
 
-    // printf("calling ANativeActivity_onStart from libTeapot\n");
-    // nActivity.callbacks->onStart(&nActivity);
+    printf("calling ANativeActivity_onStart from libTeapot\n");
+    nActivity.callbacks->onStart(&nActivity);
 
-
+    // The app has created new threads and is happily doing its thing, we just do nothing for now. Eventually, this will be a SDL based event loop for controller input.
     while(1)
         sleep(1);
 
+    printf("Exit.\n");
 
 
 
-
-  printf("Exit.\n");
-
-  
-
-  return 0;
+    return 0;
 }

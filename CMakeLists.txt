@@ -58,6 +58,7 @@ ${CMAKE_SOURCE_DIR}/thunks/
 ${CMAKE_SOURCE_DIR}/thunks/libc/
 ${CMAKE_SOURCE_DIR}/thunks/ndk/
 ${CMAKE_SOURCE_DIR}/thunks/khronos/
+${CMAKE_SOURCE_DIR}/thunks/egl_sdl/
 ${CMAKE_SOURCE_DIR}/platform/common
 ${CMAKE_SOURCE_DIR}/bridges
 ${CMAKE_SOURCE_DIR}/javastubs
@@ -71,7 +72,7 @@ target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC EnableJNIVMGC)
 # target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC JNIVM_FAKE_JNI_SYNTAX=1)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC JNI_DEBUG)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC VERBOSE_LOG)
-# target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC FAKE_EGL)
+target_compile_definitions(${CMAKE_PROJECT_NAME} PUBLIC FAKE_EGL)
 
 target_link_libraries(${CMAKE_PROJECT_NAME} ${CMAKE_SOURCE_DIR}/libjnivm/build/libfake-jni.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libbaron.a ${CMAKE_SOURCE_DIR}/libjnivm/build/libjnivm.a SDL2 dl pthread bsd)
 set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON)
