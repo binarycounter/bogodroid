@@ -30,6 +30,18 @@ int jnivm::android::view::Display::getHeight()
     return config["device"]["displayHeight"].value_or<int>(480);
 }
 
+///// InputDevice
+
+std::shared_ptr<FakeJni::JArray<int>> jnivm::android::view::InputDevice::getDeviceIds()
+{
+    verbose("JBRIDGE","App requests InputDevice IDs.... we have none.");
+    auto array = std::make_shared<FakeJni::JArray<int>>(2); 
+    (*array)[0] = 1; // Touch
+    (*array)[1] = 2; // Controller
+
+    return array; 
+}
+
 
 ///// DisplayManager
 
@@ -39,6 +51,22 @@ jnivm::android::hardware::display::DisplayManager::getDisplay()
     return std::make_shared<jnivm::android::view::Display>();
 }
 
+///// AudioManager
+
+
+bool jnivm::android::media::AudioManager::isBluetoothA2dpOn()
+{
+    return false;
+}
+
+std::shared_ptr<FakeJni::JString> jnivm::android::media::AudioManager::getProperty(std::shared_ptr<FakeJni::JString> property)
+{
+    if(*property == PROPERTY_OUTPUT_FRAMES_PER_BUFFER)
+        return std::make_shared<FakeJni::JString>("256"); // ... uh i dunno i haven't written the audio implementation yet
+    if(*property == PROPERTY_OUTPUT_SAMPLE_RATE)
+        return std::make_shared<FakeJni::JString>("44100"); // ... uhhh sure
+    return nullptr;
+}
 
 ///// PackageManager
 
@@ -46,6 +74,12 @@ std::shared_ptr<jnivm::android::content::pm::PackageInfo>
 jnivm::android::content::pm::PackageManager::getPackageInfo(std::shared_ptr<FakeJni::JString> packageName, int number)
 {
     return std::make_shared<jnivm::android::content::pm::PackageInfo>();
+}
+
+bool jnivm::android::content::pm::PackageManager::hasSystemFeature(std::shared_ptr<FakeJni::JString> feature)
+{
+    verbose("JBRIDGE","App asks about availability of feature: %s", feature.get()->c_str());
+    return false; // We don't claim support of anything right now
 }
 
 ///// AssetManager
@@ -126,7 +160,7 @@ jnivm::android::content::Context::getSystemService(std::shared_ptr<FakeJni::JStr
         return nullptr;
 
     if(*service == AUDIO_SERVICE)
-        return nullptr;
+        return std::make_shared<jnivm::android::media::AudioManager>();
     
     if(*service == DISPLAY_SERVICE)
         return std::make_shared<jnivm::android::hardware::display::DisplayManager>();
@@ -155,25 +189,25 @@ jnivm::android::content::Context::getSharedPreferences(std::shared_ptr<FakeJni::
 std::shared_ptr<FakeJni::JString>
 jnivm::android::content::Context::getPackageCodePath()
 {
-    return std::make_shared<FakeJni::JString>(config["paths"]["android_package_code"].value_or<std::string>("/path_not_defined_code"));
+    return std::make_shared<FakeJni::JString>(config["paths"]["android_package_code"].value_or<std::string>("./path_not_defined_code"));
 }
 
 std::shared_ptr<jnivm::java::io::File>
 jnivm::android::content::Context::getExternalFilesDir(std::shared_ptr<FakeJni::JString> path)
 {
-    return std::make_shared<jnivm::java::io::File>(std::make_shared<FakeJni::JString>(config["paths"]["android_external_files"].value_or<std::string>("/path_not_defined_external")));
+    return std::make_shared<jnivm::java::io::File>(std::make_shared<FakeJni::JString>(config["paths"]["android_external_files"].value_or<std::string>("./path_not_defined_external")));
 }
 
 std::shared_ptr<jnivm::java::io::File>
 jnivm::android::content::Context::getFilesDir()
 {
-    return std::make_shared<jnivm::java::io::File>(std::make_shared<FakeJni::JString>(config["paths"]["android_files"].value_or<std::string>("/path_not_defined_files")));
+    return std::make_shared<jnivm::java::io::File>(std::make_shared<FakeJni::JString>(config["paths"]["android_files"].value_or<std::string>("./path_not_defined_files")));
 }
 
 std::shared_ptr<jnivm::java::io::File>
 jnivm::android::content::Context::getCacheDir()
 {
-    return std::make_shared<jnivm::java::io::File>(std::make_shared<FakeJni::JString>(config["paths"]["android_cache"].value_or<std::string>("/path_not_defined_cache")));
+    return std::make_shared<jnivm::java::io::File>(std::make_shared<FakeJni::JString>(config["paths"]["android_cache"].value_or<std::string>("./path_not_defined_cache")));
 }
 
 std::shared_ptr<jnivm::java::io::File>
@@ -264,8 +298,22 @@ jnivm::android::os::Environment::getExternalStorageState()
     {FakeJni::Function<&Display::getHeight>{}, "getHeight", FakeJni::JMethodID::PUBLIC},
     END_NATIVE_DESCRIPTOR
 
+    BEGIN_NATIVE_DESCRIPTOR(jnivm::android::view::Surface){FakeJni::Constructor<Surface>{}},
+    END_NATIVE_DESCRIPTOR
+
+    BEGIN_NATIVE_DESCRIPTOR(jnivm::android::view::InputDevice){FakeJni::Constructor<InputDevice>{}},
+    {FakeJni::Function<&InputDevice::getDeviceIds>{}, "getDeviceIds", FakeJni::JMethodID::STATIC},
+    END_NATIVE_DESCRIPTOR
+
     BEGIN_NATIVE_DESCRIPTOR(jnivm::android::hardware::display::DisplayManager){FakeJni::Constructor<DisplayManager>{}},
     {FakeJni::Function<&DisplayManager::getDisplay>{}, "getDisplay", FakeJni::JMethodID::PUBLIC},
+    END_NATIVE_DESCRIPTOR
+
+    BEGIN_NATIVE_DESCRIPTOR(jnivm::android::media::AudioManager){FakeJni::Constructor<AudioManager>{}},
+    {FakeJni::Field<&AudioManager::PROPERTY_OUTPUT_FRAMES_PER_BUFFER>{}, "PROPERTY_OUTPUT_FRAMES_PER_BUFFER", FakeJni::JFieldID::STATIC},
+    {FakeJni::Field<&AudioManager::PROPERTY_OUTPUT_SAMPLE_RATE>{}, "PROPERTY_OUTPUT_SAMPLE_RATE", FakeJni::JFieldID::STATIC},
+    {FakeJni::Function<&AudioManager::isBluetoothA2dpOn>{}, "isBluetoothA2dpOn", FakeJni::JMethodID::PUBLIC},
+    {FakeJni::Function<&AudioManager::getProperty>{}, "getProperty", FakeJni::JMethodID::PUBLIC},
     END_NATIVE_DESCRIPTOR
 
 
@@ -278,10 +326,12 @@ jnivm::android::os::Environment::getExternalStorageState()
     END_NATIVE_DESCRIPTOR
 
     BEGIN_NATIVE_DESCRIPTOR(jnivm::android::content::pm::PackageManager){FakeJni::Constructor<PackageManager>{}},
+    {FakeJni::Field<&PackageManager::FEATURE_AUDIO_LOW_LATENCY>{}, "FEATURE_AUDIO_LOW_LATENCY", FakeJni::JFieldID::STATIC},
     {FakeJni::Function<&PackageManager::getPackageInfo>{}, "getPackageInfo", FakeJni::JMethodID::PUBLIC},
+        {FakeJni::Function<&PackageManager::hasSystemFeature>{}, "hasSystemFeature", FakeJni::JMethodID::PUBLIC},
     END_NATIVE_DESCRIPTOR
 
-BEGIN_NATIVE_DESCRIPTOR(jnivm::android::content::res::AssetManager){FakeJni::Constructor<AssetManager>{}},
+    BEGIN_NATIVE_DESCRIPTOR(jnivm::android::content::res::AssetManager){FakeJni::Constructor<AssetManager>{}},
     {FakeJni::Function<&AssetManager::open>{}, "open", FakeJni::JMethodID::PUBLIC},
     END_NATIVE_DESCRIPTOR
 
@@ -312,6 +362,7 @@ BEGIN_NATIVE_DESCRIPTOR(jnivm::android::content::res::AssetManager){FakeJni::Con
     {FakeJni::Field<&Context::LOCATION_SERVICE>{}, "LOCATION_SERVICE", FakeJni::JFieldID::STATIC},
     {FakeJni::Field<&Context::DISPLAY_SERVICE>{}, "DISPLAY_SERVICE", FakeJni::JFieldID::STATIC},
     {FakeJni::Field<&Context::AUDIO_SERVICE>{}, "AUDIO_SERVICE", FakeJni::JFieldID::STATIC},
+    {FakeJni::Field<&Context::MEDIA_ROUTER_SERVICE>{}, "MEDIA_ROUTER_SERVICE", FakeJni::JFieldID::STATIC},
     {FakeJni::Field<&Context::MODE_PRIVATE>{}, "MODE_PRIVATE", FakeJni::JFieldID::STATIC},
     {FakeJni::Function<&Context::getSystemService>{}, "getSystemService", FakeJni::JMethodID::PUBLIC},
     {FakeJni::Function<&Context::getAssets>{}, "getAssets", FakeJni::JMethodID::PUBLIC},
@@ -334,6 +385,7 @@ BEGIN_NATIVE_DESCRIPTOR(jnivm::android::content::res::AssetManager){FakeJni::Con
     BEGIN_NATIVE_DESCRIPTOR(jnivm::android::os::Build){FakeJni::Constructor<Build>{}},
     {FakeJni::Field<&Build::MANUFACTURER>{}, "MANUFACTURER", FakeJni::JMethodID::STATIC},
     {FakeJni::Field<&Build::MODEL>{}, "MODEL", FakeJni::JMethodID::STATIC},
+    {FakeJni::Field<&Build::DEVICE>{}, "DEVICE", FakeJni::JMethodID::STATIC},
     END_NATIVE_DESCRIPTOR
 
     BEGIN_NATIVE_DESCRIPTOR(jnivm::android::os::BuildVersion){FakeJni::Constructor<BuildVersion>{}},
@@ -366,7 +418,10 @@ void InitJNIAndroidClasses(FakeJni::Jvm *vm)
 {
     verbose("JBRIDGE","Initializing Android JNI Classes");
     vm->registerClass<jnivm::android::view::Display>();
+    vm->registerClass<jnivm::android::view::Surface>();
+    vm->registerClass<jnivm::android::view::InputDevice>();
     vm->registerClass<jnivm::android::hardware::display::DisplayManager>();
+    vm->registerClass<jnivm::android::media::AudioManager>();
     vm->registerClass<jnivm::android::os::Build>();
     vm->registerClass<jnivm::android::os::BuildVersion>();
     vm->registerClass<jnivm::android::os::Process>();

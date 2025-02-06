@@ -93,6 +93,7 @@ namespace jnivm
                 Scanner(std::shared_ptr<jnivm::java::io::InputStream> stream, std::shared_ptr<FakeJni::JString> str);
                 std::shared_ptr<Scanner> useDelimiter(std::shared_ptr<FakeJni::JString> str);
                 std::shared_ptr<FakeJni::JString> next();
+                std::shared_ptr<FakeJni::JString> nextLine();
             };
 
         }

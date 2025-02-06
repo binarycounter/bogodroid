@@ -13,6 +13,8 @@ extern toml::table config;
 #include "asset_manager.h"
 #include "anative_activity.h"
 
+static ANativeWindow* default_native_window;
+
 ABI_ATTR AConfiguration *AConfiguration_new()
 {
     AConfiguration *config = new AConfiguration;
@@ -98,6 +100,15 @@ ABI_ATTR int32_t ret0()
     return 0;
 }
 
+ABI_ATTR ANativeWindow* ANativeWindow_fromSurface(void*, void*)
+{
+    if(default_native_window==NULL)
+    {
+        default_native_window = (ANativeWindow*)malloc(sizeof(ANativeWindow));
+    }
+    return default_native_window;
+}
+
 ABI_ATTR int32_t ANativeWindow_getWidth(ANativeWindow *window)
 {
     return config["device"]["displayWidth"].value_or<int>(640);
@@ -141,6 +152,10 @@ NO_THUNK("ALooper_prepare", (uintptr_t)&ALooper_prepare),
 NO_THUNK("ALooper_addFd", (uintptr_t)&ALooper_addFd),
 NO_THUNK("ALooper_pollAll", (uintptr_t)&ALooper_pollAll),
 NO_THUNK("ALooper_pollOnce", (uintptr_t)&ALooper_pollOnce), //AWFUL
+NO_THUNK("ANativeWindow_fromSurface", (uintptr_t)&ANativeWindow_fromSurface), //AWFUL
+NO_THUNK("ANativeWindow_acquire", (uintptr_t)&ret0), //AWFUL
+NO_THUNK("ANativeWindow_release", (uintptr_t)&ret0), //AWFUL
+NO_THUNK("ANativeWindow_setBuffersGeometry", (uintptr_t)&ret0), //AWFUL
 NO_THUNK("ANativeWindow_getWidth", (uintptr_t)&ANativeWindow_getWidth),
 NO_THUNK("ANativeWindow_getHeight", (uintptr_t)&ANativeWindow_getHeight),
 NO_THUNK("__assert2", (uintptr_t)&__assert2),

@@ -1,3 +1,6 @@
+#define _GNU_SOURCE
+#include <dlfcn.h>
+
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
@@ -5,7 +8,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdio.h>
 #include <stdio.h>
 #include <stdarg.h>
 #include "platform.h"
@@ -34,15 +36,19 @@ extern "C" ABI_ATTR void abort_impl(void)
 
 extern "C" ABI_ATTR void *dlopen_impl(const char *filename, int flags)
 {
+    printf("Guest called dlopen for %s\n",filename);
+
     if (filename == NULL)
         return NULL;
 
-    char *fn = strdup(filename);
-    char *ex = basename(fn);
-    int ret = strncmp(ex, "libEGL", 6) == 0 ||
-              strncmp(ex, "libGL", 5) == 0;
 
-    return (ret) ? (void*)0xDEAD : NULL;
+    // char *fn = strdup(filename);
+    // char *ex = basename(fn);
+    // int ret = strncmp(ex, "libEGL", 6) == 0 ||
+    //           strncmp(ex, "libGL", 5) == 0;
+
+    // return (ret) ? (void*)0xDEAD : NULL;
+    return (void*)0xDEAD;
 }
 
 extern "C" ABI_ATTR char *dlerror_impl(void)
@@ -57,9 +63,19 @@ extern "C" ABI_ATTR int dlclose_impl(void *handle)
     return 0;
 }
 
+extern "C" ABI_ATTR int dladdr_impl(const void *addr, Dl_info *info)
+{
+    /* THIS IS TERRIBLE LOL */
+    WARN_STUB
+    return 0;
+}
+
 extern "C" ABI_ATTR void *dlsym_impl(void *handle, const char *name)
 {
-    return (void*)so_resolve_link(NULL, name);
+    printf("App is attempting to resolve symbol %s => ",name);
+    void* addr=(void*)so_resolve_link(NULL, name);
+    printf("%p\n",addr);
+    return addr;
 }
 
 extern "C" ABI_ATTR const void *
@@ -210,4 +226,10 @@ ABI_ATTR int scandir_impl(const char *dir,
                                      const struct bionic_dirent **))
 {
     return scandirat_impl(AT_FDCWD, dir, namelist, filter, compar);
+}
+
+
+ABI_ATTR int prctl_impl(int op, int arg1, int arg2, int arg3)
+{
+    return 0;
 }

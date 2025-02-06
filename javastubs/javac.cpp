@@ -82,6 +82,18 @@ std::shared_ptr<FakeJni::JString> jnivm::java::util::Scanner::next(){
     return std::make_shared<FakeJni::JString>(str);
 }
 
+std::shared_ptr<FakeJni::JString> jnivm::java::util::Scanner::nextLine(){
+    std::string str;
+    (istream->file)->seekg(0, std::ios::end);   
+    str.reserve((istream->file)->tellg());
+    (istream->file)->seekg(0, std::ios::beg);
+
+    str.assign((std::istreambuf_iterator<char>(*(istream->file))),
+            std::istreambuf_iterator<char>());
+    verbose("JBRIDGE","Scanner returning: %s",str.c_str());
+    return std::make_shared<FakeJni::JString>(str);
+}
+
 // Descriptors
 
 BEGIN_NATIVE_DESCRIPTOR(jnivm::java::lang::ClassLoader)
@@ -112,6 +124,7 @@ BEGIN_NATIVE_DESCRIPTOR(jnivm::java::util::Scanner)
 {FakeJni::Constructor<Scanner, std::shared_ptr<jnivm::java::io::InputStream>, std::shared_ptr<FakeJni::JString>>{}},
 {FakeJni::Function<&Scanner::useDelimiter>{}, "useDelimiter", FakeJni::JMethodID::PUBLIC },
 {FakeJni::Function<&Scanner::next>{}, "next", FakeJni::JMethodID::PUBLIC },
+{FakeJni::Function<&Scanner::next>{}, "nextLine", FakeJni::JMethodID::PUBLIC },
 END_NATIVE_DESCRIPTOR
 
 void InitJNIJavaClasses(FakeJni::Jvm *vm)

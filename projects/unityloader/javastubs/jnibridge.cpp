@@ -1,5 +1,6 @@
 #include "baron/baron.h"
 #include "platform.h"
+#include "logging.h"
 #include "jnibridge.h"
 
 

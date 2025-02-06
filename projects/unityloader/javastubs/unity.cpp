@@ -18,4 +18,7 @@ BEGIN_NATIVE_DESCRIPTOR(jnivm::com::unity3d::player::PlayAssetDeliveryUnityWrapp
 {FakeJni::Function<&PlayAssetDeliveryUnityWrapper::playCoreApiMissing>{}, "playCoreApiMissing", FakeJni::JMethodID::PUBLIC },
 END_NATIVE_DESCRIPTOR
 
+BEGIN_NATIVE_DESCRIPTOR(jnivm::com::unity3d::player::UnityPlayerActivity)
+END_NATIVE_DESCRIPTOR
+
 

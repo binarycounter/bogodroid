@@ -21,6 +21,18 @@ namespace jnivm
                 int getWidth();
                 int getHeight();
             };
+            class Surface : public FakeJni::JObject
+            {
+            public:
+                DEFINE_CLASS_NAME("android/view/Surface")
+            };
+            class InputDevice : public FakeJni::JObject
+            {
+            public:
+                DEFINE_CLASS_NAME("android/view/InputDevice")
+                static std::shared_ptr<FakeJni::JArray<int>> getDeviceIds();
+            };
+            
         }
         namespace hardware
         {
@@ -34,6 +46,18 @@ namespace jnivm
                 };
             }
         }
+        namespace media
+        {
+            class AudioManager : public FakeJni::JObject
+                {
+                public:
+                    DEFINE_CLASS_NAME("android/media/AudioManager")
+                    inline static FakeJni::JString PROPERTY_OUTPUT_FRAMES_PER_BUFFER = (FakeJni::JString) "PROPERTY_OUTPUT_FRAMES_PER_BUFFER";
+                    inline static FakeJni::JString PROPERTY_OUTPUT_SAMPLE_RATE = (FakeJni::JString) "PROPERTY_OUTPUT_SAMPLE_RATE";
+                    bool isBluetoothA2dpOn();
+                    std::shared_ptr<FakeJni::JString> getProperty(std::shared_ptr<FakeJni::JString> property);
+                };
+        }
 
         namespace os
         {
@@ -44,6 +68,7 @@ namespace jnivm
                 DEFINE_CLASS_NAME("android/os/Build");
                 inline static FakeJni::JString MANUFACTURER = (FakeJni::JString) "Rockchip";
                 inline static FakeJni::JString MODEL = (FakeJni::JString) "RK3326";
+                inline static FakeJni::JString DEVICE = (FakeJni::JString) "R36S";
             };
 
             class BuildVersion : public FakeJni::JObject
@@ -113,7 +138,9 @@ namespace jnivm
                 {
                 public:
                     DEFINE_CLASS_NAME("android/content/pm/PackageManager")
+                    inline static FakeJni::JString FEATURE_AUDIO_LOW_LATENCY = (FakeJni::JString) "FEATURE_AUDIO_LOW_LATENCY";
                     std::shared_ptr<PackageInfo> getPackageInfo(std::shared_ptr<FakeJni::JString> packageName, int number);
+                    bool hasSystemFeature(std::shared_ptr<FakeJni::JString> feature);
                 };
             }
 
@@ -154,6 +181,7 @@ namespace jnivm
                 inline static FakeJni::JString LOCATION_SERVICE = (FakeJni::JString) "LOCATION_SERVICE";
                 inline static FakeJni::JString DISPLAY_SERVICE = (FakeJni::JString) "DISPLAY_SERVICE";
                 inline static FakeJni::JString AUDIO_SERVICE = (FakeJni::JString) "AUDIO_SERVICE";
+                inline static FakeJni::JString MEDIA_ROUTER_SERVICE = (FakeJni::JString) "MEDIA_ROUTER_SERVICE";
 
                 inline static int MODE_PRIVATE = 0;
 

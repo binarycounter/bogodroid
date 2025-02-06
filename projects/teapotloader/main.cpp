@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 
     print_native_callbacks(nActivity);
 
-    //Cretate a Window
+    //Create a Window
     ANativeWindow nWindow;
     memset( &nWindow, 0, sizeof( ANativeWindow ) );
 
@@ -116,9 +116,7 @@ int main(int argc, char *argv[])
     while(1)
         sleep(1);
 
+
     printf("Exit.\n");
-
-
-
     return 0;
 }

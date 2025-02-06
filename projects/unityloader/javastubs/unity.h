@@ -18,6 +18,12 @@ namespace jnivm
                     bool playCoreApiMissing();
                     static std::shared_ptr<PlayAssetDeliveryUnityWrapper> init(std::shared_ptr<jnivm::android::content::Context> context);
                 };
+
+                class UnityPlayerActivity : public jnivm::android::app::Activity
+                {
+                public:
+                    DEFINE_CLASS_NAME("com/unity3d/player/UnityPlayerActivity")
+                };
             }
 
         }

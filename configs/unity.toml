@@ -1,6 +1,6 @@
 [paths]
 
-game_files="../gamefiles/unity/"
+game_files="../gamefiles/unitytest/"
 support_files="../gamefiles/support_files/"
 
 android_package_code="/fakepath_package_code"

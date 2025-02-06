@@ -22,6 +22,6 @@ bool load_so_from_file(so_module *mod, const char *filename, uintptr_t addr)
   char *buffer = new char[fileSize];
   file.read(buffer, fileSize);
   file.close();
-  so_load(mod, "", addr, buffer, fileSize);
+  so_load(mod, filename, addr, buffer, fileSize);
   return true;
 }
